@@ -1,4 +1,4 @@
-import { Schema, Context, h } from 'koishi'
+import { Schema, Context, h, Session } from 'koishi'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { unlink, writeFile } from 'node:fs/promises'
@@ -117,6 +117,13 @@ export function apply(ctx: Context, config) {
       (logger.info as (...args: any[]) => void)(...args);
     }
   }
+  // 获取图片 URL 的新函数
+  function getImageURL(session: Session): string | undefined {
+    const quoteImage = h.select(session.quote?.content, "img").map((a) => a.attrs.src)[0];
+    const contentImage = h.select(session.content, "img").map((a) => a.attrs.src)[0];
+    return quoteImage || contentImage;
+  }
+
   ctx.i18n.define("zh-CN", {
     commands: {
       [config.gifCommand]: {
@@ -173,7 +180,8 @@ export function apply(ctx: Context, config) {
       }
       if (speed <= 0) return session.text(".invalidPTS")
 
-      let src = gif?.src
+      let src = gif?.src || getImageURL(session)
+      
       if (!src) {
         const [msgId] = await session.send(session.text(".waitprompt", [config.waitTimeout]))
         const content = await session.prompt(config.waitTimeout * 1000)
